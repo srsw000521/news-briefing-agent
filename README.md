@@ -11,7 +11,7 @@ LangGraph 기반 멀티 에이전트 시스템으로, 키워드를 입력하면 
 ## Architecture
 
 <p align="center">
-  <img src="docs/images.png" alt="Architecture Diagram" width="700"/>
+  <img src="docs/image.png" alt="Architecture Diagram" width="700"/>
 </p>
 
 각 Agent는 LangGraph의 노드로 정의되며, TypedDict 기반 공유 State를 통해 데이터를 주고받습니다.
