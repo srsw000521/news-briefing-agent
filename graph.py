@@ -8,16 +8,18 @@ from langgraph.graph import StateGraph, START, END
 
 from agents.planner import planner_agent
 from agents.search import search_agent
+from agents.summary import summary_agent
 from agents.editor import editor_agent
 
 
 # 모든 Agent가 공유하는 상태 정의
 class BriefingState(TypedDict):
-    keyword: str  # 사용자 입력 키워드
-    queries: list[str]  # Planner가 생성한 검색 쿼리
-    categories: list[str]  # Planner가 정한 카테고리
-    search_results: list[dict]  # Search가 수집한 결과
-    briefing: str  # Editor가 작성한 최종 브리핑
+    keyword: str
+    queries: list[str]
+    categories: list[str]
+    search_results: list[dict]
+    facts: list[dict]
+    briefing: str
 
 
 # === 각 노드 함수 정의 ===
@@ -45,12 +47,21 @@ def search_node(state: BriefingState) -> dict:
     return {"search_results": results}
 
 
+def summary_node(state: BriefingState) -> dict:
+    """Summary Agent 실행"""
+    print("\n📝 [3/4] Summary Node 실행 중...")
+    facts = summary_agent(state["search_results"])
+    print(f"   ✓ {len(facts)}개의 핵심 사실 추출")
+
+    return {"facts": facts}
+
+
 def editor_node(state: BriefingState) -> dict:
     """Editor Agent 실행"""
-    print("\n✏️  [3/3] Editor Node 실행 중...")
+    print("\n✏️  [4/4] Editor Node 실행 중...")
     briefing = editor_agent(
         keyword=state["keyword"],
-        search_results=state["search_results"],
+        facts=state["facts"],  # ← search_results 대신 facts
         categories=state["categories"],
     )
     print(f"   ✓ 브리핑 작성 완료")
@@ -62,18 +73,17 @@ def editor_node(state: BriefingState) -> dict:
 
 
 def build_graph():
-    """LangGraph 그래프를 구성하고 컴파일"""
     workflow = StateGraph(BriefingState)
 
-    # 노드 추가
     workflow.add_node("planner", planner_node)
     workflow.add_node("search", search_node)
+    workflow.add_node("summary", summary_node)
     workflow.add_node("editor", editor_node)
 
-    # 엣지 정의 (흐름)
     workflow.add_edge(START, "planner")
     workflow.add_edge("planner", "search")
-    workflow.add_edge("search", "editor")
+    workflow.add_edge("search", "summary")
+    workflow.add_edge("summary", "editor")
     workflow.add_edge("editor", END)
 
     return workflow.compile()
